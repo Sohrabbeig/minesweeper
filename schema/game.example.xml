@@ -10,7 +10,7 @@
             <time>0</time>
         </level>
 
-        <level id="2" title="Harder!" timer="true">
+        <level id="2" title="Hard!" timer="true">
             <rows>10</rows>
             <cols>10</cols>
             <mines>5</mines>

@@ -31,6 +31,85 @@ function page_initialization() {
     modal_content.appendChild(button);
     //End of Enter name section
 
+    //pop up section
+    var popup = document.createElement("div");
+    popup.setAttribute("id", "myModal");
+    popup.setAttribute("class", "popup");
+    document.body.appendChild(popup);
+
+    var popup_content = document.createElement("div");
+    popup_content.setAttribute("class", "popup-content");
+    popup.appendChild(popup_content);
+
+    var close = document.createElement("span");
+    close.innerHTML = "&times;";
+    close.setAttribute("class", "close");
+    popup_content.appendChild(close);
+
+    var form = document.createElement("form");
+    form.setAttribute("id", "newGameForm");
+    popup_content.appendChild(form);
+
+    var fieldset = document.createElement("fieldset");
+    fieldset.setAttribute("id", "newGameFieldset");
+    form.appendChild(fieldset);
+
+    var legend = document.createElement("legend");
+    legend.innerHTML = "NEW GAME!"
+    legend.setAttribute("id", "newGameLegend");
+    fieldset.appendChild(legend);
+
+    var p = document.createElement("p");
+    p.innerHTML = "which one do you choose:";
+    fieldset.appendChild(p);
+
+    var radiobutton1 = document.createElement("input");
+    radiobutton1.setAttribute("id", "radio1");
+    radiobutton1.setAttribute("type", "radio");
+    radiobutton1.setAttribute("name", "newGame");
+    radiobutton1.setAttribute("value", "1");
+    fieldset.appendChild(radiobutton1);
+
+    var p = document.createElement("p");
+    p.innerHTML = "Beginner! 3*3 <br>";
+    p.style.display = "inline";
+    fieldset.appendChild(p);
+
+    var radiobutton2 = document.createElement("input");
+    radiobutton2.setAttribute("id", "radio2");
+    radiobutton2.setAttribute("type", "radio");
+    radiobutton2.setAttribute("name", "newGame");
+    radiobutton2.setAttribute("value", "2");
+    fieldset.appendChild(radiobutton2);
+
+    var p = document.createElement("p");
+    p.innerHTML = "Hard! 10*10 <br>";
+    p.style.display = "inline";
+    fieldset.appendChild(p);
+
+    var submit = document.createElement("input");
+    submit.setAttribute("type", "button");
+    submit.setAttribute("value", "submit");
+    fieldset.appendChild(submit);
+
+    var beginner = "<request>" +
+        " <rows>3</rows>" +
+        " <cols>3</cols>" +
+        "<mines>3</mines>" +
+        "</request>";
+
+    var hard = "<request>"+
+        "<rows>9</rows>"+
+        "<cols>9</cols>"+
+        "<mines>10</mines>"+
+        "</request>";
+
+    submit.onclick = function () {
+        if (document.getElementById("radio1").checked)requestLevel(parse(beginner));
+        else requestLevel(parse(hard));
+    }
+    //pop up section
+
     //start of Window section
     var window = document.createElement("div"); //the minesweeper game window
     window.setAttribute("class", "window");
@@ -70,7 +149,7 @@ function page_initialization() {
     counter1.innerHTML = 123;
     top.appendChild(counter1);
 
-    var smile = document.createElement("span");//the smile emoji in the top section
+    var smile = document.createElement("button");//the smile emoji in the top section
     smile.setAttribute("class", "smile");
     smile.setAttribute("data-value", "normal");
     top.appendChild(smile);
@@ -80,19 +159,138 @@ function page_initialization() {
     counter2.innerHTML = 321;
     top.appendChild(counter2);
 
+
 }
 
-function getGameXML() {
-    
+function parse(xml_str) {
+    var parser = new DOMParser();
+    var xmlDOM = parser.parseFromString(xml_str, "text/xml");
+    return xmlDOM;
 }
 
-page_initialization();
-getGameXML();
+function validate(xmlDOM) {
+    var id = xmlDOM.getElementsByTagName("game")[0].getAttribute("id");
+    if (id == "minesweeper") return true;
+    else return false;
+}
 
-// getNewGame(`
-//     <request>
-//     <rows>3</rows>
-//     <cols>3</cols>
-//     <mines>3</mines>
-//     </request>
-// `);
+var xml_str = '<game id="minesweeper" title="Minesweeper Online"><levels default="1"> <level id="1" title="Beginner!" timer="false"> <rows>3</rows> <cols>3</cols> <mines>3</mines> <time>0</time> </level> <level id="2" title="Harder!" timer="true"> <rows>10</rows> <cols>10</cols> <mines>5</mines> <time>120</time> </level> </levels></game>'
+var game_spec;
+
+
+function getGameXML(xmlDOM) {
+    if (!validate(xmlDOM)){
+        window.alert("the xml is not valid!");
+    }
+    game_spec = {
+        game_title:xmlDOM.getElementsByTagName("game")[0].attributes.getNamedItem("title").value,
+        game_id:xmlDOM.getElementsByTagName("game")[0].attributes.getNamedItem("id").value,
+        default_level:xmlDOM.getElementsByTagName("levels")[0].attributes.getNamedItem("default").value,
+        levels: []
+    }
+    var l = xmlDOM.getElementsByTagName("level");
+    for (var i = 0; i < l.length; i++) {
+        var level = {};
+        level.id = l[i].attributes.getNamedItem("id");
+        level.title = l[i].attributes.getNamedItem("title");
+        level.timer = l[i].attributes.getNamedItem("timer");
+        level.rows = l[i].getElementsByTagName("rows")[0].childNodes[0].nodeValue;
+        level.cols = l[i].getElementsByTagName("cols")[0].childNodes[0].nodeValue;
+        level.mines = l[i].getElementsByTagName("mines")[0].childNodes[0].nodeValue;
+        level.time = l[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
+        game_spec.levels.push(level);
+    }
+}
+
+function _rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function getNewGame() {
+    popup.style.display = "block";
+}
+
+function requestLevel(newGameDOM) {
+    popup.style.display = "none";
+    // Initialize empty game
+    var game = [];
+    var rows = newGameDOM.getElementsByTagName("rows")[0].childNodes[0].nodeValue;
+    var cols = newGameDOM.getElementsByTagName("cols")[0].childNodes[0].nodeValue;
+    var mines = newGameDOM.getElementsByTagName("mines")[0].childNodes[0].nodeValue;
+    for (var r = 0; r <rows; r++) {
+        var row = [];
+        for (var c = 0; c <cols; c++)
+            row.push(undefined);
+        game.push(row);
+    }
+
+    // Randomly place mines
+    for (var i = 0; i < mines; i++) {
+        var x, y;
+        do {
+            x = _rand(0, cols-1);
+            y = _rand(0, rows-1);
+        } while (game[x][y] !== undefined);
+        game[x][y] = true;
+    }
+
+    var levelXML = '<grid>';
+    for (var r = 0; r < rows; r++) {
+        levelXML += '<row row="${r + 1}">';
+        for (var c = 0; c < cols; c++) {
+
+            levelXML += `<col col="${c + 1}" ${game[r][c]===true ? 'mine="true"' : ''} />`;
+        }
+        levelXML += '</row>';
+    }
+    levelXML += '</grid>';
+    newGame(parse(levelXML));
+}
+
+function makeXSL() {
+
+    var xml=`<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:template match="/">
+    <div class="grid">
+    <xsl:for-each select="/grid/row">
+        <xsl:for-each select="./col">
+            <span></span>
+        </xsl:for-each>
+    </xsl:for-each>
+    </div>
+</xsl:template>
+</xsl:stylesheet>`;
+    return new DOMParser().parseFromString(xml,"text/xml")
+}
+
+function newGame(levelXML) {
+    var xsltProcessor = new XSLTProcessor();
+    xsltProcessor.importStylesheet(makeXSL());
+    var resultDocument = xsltProcessor.transformToFragment(levelXML,document);
+    // console.log(resultDocument.getElementsByTagName("span").length);
+    document.getElementsByClassName('window')[0].appendChild(resultDocument);
+}
+
+page_initialization();// initializing the page
+getGameXML(parse(xml_str));
+
+var popup = document.getElementById("myModal");
+var close = document.getElementsByClassName("close")[0];
+document.onload = getNewGame();
+//noinspection BadExpressionStatementJS
+var smile = document.getElementsByClassName("smile")[0];
+smile.onclick = function() {
+    popup.style.display = "block";
+}
+
+close.onclick = function() {
+    popup.style.display = "none";
+}
+
+window.onclick = function(event) {
+    if (event.target == popup) {
+        popup.style.display = "none";
+    }
+}
+
